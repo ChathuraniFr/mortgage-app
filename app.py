@@ -1,8 +1,17 @@
-import math
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+from mortgage_features import (
+    calculate_balance_after_term,
+    calculate_lump_sum_impact,
+    calculate_mortgage_by_payment,
+    calculate_mortgage_by_payment_with_lump_sum,
+    calculate_mortgage_by_term,
+    calculate_mortgage_by_term_with_lump_sum,
+    get_minimum_monthly_payment,
+)
 
 
 TRANSLATIONS = {
@@ -12,12 +21,14 @@ TRANSLATIONS = {
         "calculation_type": "Calculation type",
         "monthly_payment_mode": "Monthly payment",
         "payoff_time_mode": "Payoff time",
+        "remaining_balance_mode": "Remaining balance after term",
         "loan_amount": "Loan amount (€)",
         "interest_rate": "Interest rate (%)",
         "years": "Years",
         "monthly_payment": "Monthly payment (€)",
+        "annual_lump_sum": "Annual lump sum payment (€)",
+        "residual_balance": "Target residual balance (€)",
         "calculate": "Calculate",
-        "show_selector": "Show",
         "summary": "Summary",
         "remaining_balance_graph": "Remaining balance graph",
         "total_mortgage_cost": "Total mortgage cost",
@@ -29,13 +40,16 @@ TRANSLATIONS = {
         "total_paid_metric": "Total Paid",
         "total_interest_metric": "Total Interest",
         "time_needed_metric": "Time Needed",
+        "residual_balance_metric": "Residual Balance",
         "exact_monthly_payment_caption": "Exact monthly payment before rounding: €{value:,.6f}",
-        "payoff_caption": "At €{payment:,.2f} per month, the mortgage is repaid in {years} years and {months} months.",
+        "payoff_caption": "At €{payment:,.2f} per month, the mortgage reaches the target balance after {years} years and {months} months.",
+        "balance_after_term_caption": "After {years} years of paying €{payment:,.2f} per month, the remaining balance is €{balance:,.2f}.",
+        "residual_balance_caption": "Target residual balance: €{value:,.2f}",
         "time_needed_format_full": "{years} years, {months} months",
         "time_needed_format_years": "{years} years",
         "time_needed_format_months": "{months} months",
         "time_needed_format_zero": "0 months",
-        "principal": "Principal",
+        "principal": "Principal repaid",
         "interest": "Interest",
         "total": "Total",
         "year": "Year",
@@ -56,6 +70,9 @@ TRANSLATIONS = {
         "interest_rate_error": "Interest rate cannot be negative.",
         "years_error": "Years must be greater than 0.",
         "monthly_payment_error": "Monthly payment must be greater than 0.",
+        "annual_lump_sum_error": "Annual lump sum payment cannot be negative.",
+        "residual_balance_error": "Residual balance cannot be negative.",
+        "residual_balance_too_high_error": "Residual balance must be lower than the loan amount.",
         "invalid_numeric_error": "Please enter valid numeric values in all required fields.",
         "payment_too_low_error": "The monthly payment is too low. It does not cover the monthly interest, so the loan would never be repaid.",
         "minimum_payment_needed": "The minimum monthly payment must be greater than €{value:,.2f}.",
@@ -65,6 +82,8 @@ TRANSLATIONS = {
         "placeholder_rate": "e.g. 4",
         "placeholder_years": "e.g. 30",
         "placeholder_payment": "e.g. 1909.67",
+        "placeholder_lump_sum": "e.g. 5000",
+        "placeholder_residual_balance": "e.g. 100000",
         "hover_remaining_balance": "Year: %{x}<br>Remaining Balance: €%{y:,.2f}<extra></extra>",
         "hover_principal_bar": "Year: %{x}<br>Principal: €%{y:,.2f}<extra></extra>",
         "hover_interest_bar": "Year: %{x}<br>Interest: €%{y:,.2f}<extra></extra>",
@@ -86,6 +105,8 @@ TRANSLATIONS = {
         "invalid_integer_error": "Please enter a whole number in the field: {field}",
         "input_section": "Inputs",
         "results_section": "Results",
+        "lump_sum_details_caption": "Base monthly payment: €{base:,.2f} | Annual lump sum: €{lump_sum:,.2f}",
+        "lump_sum_savings_caption": "The annual lump sum saves €{interest_saved:,.2f} in interest and {years} years and {months} months in time.",
     },
     "Deutsch": {
         "app_title": "Kreditrechner",
@@ -93,12 +114,14 @@ TRANSLATIONS = {
         "calculation_type": "Berechnungsart",
         "monthly_payment_mode": "Monatliche Rate",
         "payoff_time_mode": "Laufzeit",
+        "remaining_balance_mode": "Restschuld nach Laufzeit",
         "loan_amount": "Darlehensbetrag (€)",
         "interest_rate": "Zinssatz (%)",
         "years": "Jahre",
         "monthly_payment": "Monatliche Rate (€)",
+        "annual_lump_sum": "Jährliche Sondertilgung (€)",
+        "residual_balance": "Ziel-Restschuld (€)",
         "calculate": "Berechnen",
-        "show_selector": "Anzeigen",
         "summary": "Übersicht",
         "remaining_balance_graph": "Restschuldgrafik",
         "total_mortgage_cost": "Gesamtkosten der Hypothek",
@@ -110,13 +133,16 @@ TRANSLATIONS = {
         "total_paid_metric": "Gesamt gezahlt",
         "total_interest_metric": "Gesamtzinsen",
         "time_needed_metric": "Benötigte Zeit",
+        "residual_balance_metric": "Restschuld",
         "exact_monthly_payment_caption": "Exakte monatliche Rate vor Rundung: €{value:,.6f}",
-        "payoff_caption": "Bei €{payment:,.2f} pro Monat ist die Hypothek nach {years} Jahren und {months} Monaten zurückgezahlt.",
+        "payoff_caption": "Bei €{payment:,.2f} pro Monat erreicht die Hypothek die Ziel-Restschuld nach {years} Jahren und {months} Monaten.",
+        "balance_after_term_caption": "Nach {years} Jahren mit einer monatlichen Rate von €{payment:,.2f} beträgt die Restschuld €{balance:,.2f}.",
+        "residual_balance_caption": "Ziel-Restschuld: €{value:,.2f}",
         "time_needed_format_full": "{years} Jahre, {months} Monate",
         "time_needed_format_years": "{years} Jahre",
         "time_needed_format_months": "{months} Monate",
         "time_needed_format_zero": "0 Monate",
-        "principal": "Tilgung",
+        "principal": "Getilgtes Kapital",
         "interest": "Zinsen",
         "total": "Gesamt",
         "year": "Jahr",
@@ -137,6 +163,9 @@ TRANSLATIONS = {
         "interest_rate_error": "Der Zinssatz darf nicht negativ sein.",
         "years_error": "Die Jahre müssen größer als 0 sein.",
         "monthly_payment_error": "Die monatliche Rate muss größer als 0 sein.",
+        "annual_lump_sum_error": "Die jährliche Sondertilgung darf nicht negativ sein.",
+        "residual_balance_error": "Die Restschuld darf nicht negativ sein.",
+        "residual_balance_too_high_error": "Die Restschuld muss kleiner sein als der Darlehensbetrag.",
         "invalid_numeric_error": "Bitte gib in allen erforderlichen Feldern gültige Zahlen ein.",
         "payment_too_low_error": "Die monatliche Rate ist zu niedrig. Sie deckt nicht einmal die monatlichen Zinsen, daher würde das Darlehen nie vollständig zurückgezahlt.",
         "minimum_payment_needed": "Die minimale monatliche Rate muss größer als €{value:,.2f} sein.",
@@ -146,6 +175,8 @@ TRANSLATIONS = {
         "placeholder_rate": "z. B. 4",
         "placeholder_years": "z. B. 30",
         "placeholder_payment": "z. B. 1909,67",
+        "placeholder_lump_sum": "z. B. 5000",
+        "placeholder_residual_balance": "z. B. 100000",
         "hover_remaining_balance": "Jahr: %{x}<br>Restschuld: €%{y:,.2f}<extra></extra>",
         "hover_principal_bar": "Jahr: %{x}<br>Tilgung: €%{y:,.2f}<extra></extra>",
         "hover_interest_bar": "Jahr: %{x}<br>Zinsen: €%{y:,.2f}<extra></extra>",
@@ -167,6 +198,8 @@ TRANSLATIONS = {
         "invalid_integer_error": "Bitte gib eine ganze Zahl ein im Feld: {field}",
         "input_section": "Eingaben",
         "results_section": "Ergebnisse",
+        "lump_sum_details_caption": "Normale Monatsrate: €{base:,.2f} | Jährliche Sondertilgung: €{lump_sum:,.2f}",
+        "lump_sum_savings_caption": "Die jährliche Sondertilgung spart €{interest_saved:,.2f} Zinsen und {years} Jahre und {months} Monate Zeit.",
     },
 }
 
@@ -186,6 +219,16 @@ def validate_float_field(value: str, field_label: str, t: dict) -> tuple[float |
     missing_error = validate_required_text(value, field_label, t)
     if missing_error:
         return None, missing_error
+
+    try:
+        return parse_number(value), None
+    except ValueError:
+        return None, t["invalid_number_error"].format(field=field_label)
+
+
+def validate_optional_float_field(value: str, field_label: str, t: dict) -> tuple[float | None, str | None]:
+    if value is None or value.strip() == "":
+        return 0.0, None
 
     try:
         return parse_number(value), None
@@ -217,159 +260,6 @@ def format_time_duration(years: int, months: int, t: dict) -> str:
     return t["time_needed_format_zero"]
 
 
-def get_minimum_monthly_payment(loan_amount: float, annual_interest_rate: float) -> float:
-    monthly_interest_rate = annual_interest_rate / 100 / 12
-    return loan_amount * monthly_interest_rate
-
-
-def calculate_mortgage_by_term(
-    loan_amount: float,
-    annual_interest_rate: float,
-    years: int,
-    t: dict,
-) -> dict:
-    monthly_interest_rate = annual_interest_rate / 100 / 12
-    number_of_payments = years * 12
-
-    if monthly_interest_rate == 0:
-        exact_monthly_payment = loan_amount / number_of_payments
-    else:
-        exact_monthly_payment = loan_amount * (
-            monthly_interest_rate * (1 + monthly_interest_rate) ** number_of_payments
-        ) / (
-            (1 + monthly_interest_rate) ** number_of_payments - 1
-        )
-
-    monthly_payment = math.ceil(exact_monthly_payment * 100) / 100
-
-    return build_amortization_schedule(
-        loan_amount=loan_amount,
-        annual_interest_rate=annual_interest_rate,
-        monthly_payment=monthly_payment,
-        exact_monthly_payment=exact_monthly_payment,
-        calculation_type=t["monthly_payment_mode"],
-        t=t,
-    )
-
-
-def calculate_mortgage_by_payment(
-    loan_amount: float,
-    annual_interest_rate: float,
-    monthly_payment: float,
-    t: dict,
-) -> dict:
-    minimum_payment = get_minimum_monthly_payment(loan_amount, annual_interest_rate)
-
-    if annual_interest_rate > 0 and monthly_payment <= minimum_payment:
-        minimum_payment_display = math.ceil(minimum_payment * 100) / 100
-        raise ValueError(
-            f"{t['payment_too_low_error']} "
-            f"{t['minimum_payment_needed'].format(value=minimum_payment_display)} "
-            f"{t['minimum_payment_hint'].format(value=minimum_payment_display)}"
-        )
-
-    return build_amortization_schedule(
-        loan_amount=loan_amount,
-        annual_interest_rate=annual_interest_rate,
-        monthly_payment=monthly_payment,
-        exact_monthly_payment=monthly_payment,
-        calculation_type=t["payoff_time_mode"],
-        t=t,
-    )
-
-
-def build_amortization_schedule(
-    loan_amount: float,
-    annual_interest_rate: float,
-    monthly_payment: float,
-    exact_monthly_payment: float,
-    calculation_type: str,
-    t: dict,
-) -> dict:
-    monthly_interest_rate = annual_interest_rate / 100 / 12
-
-    balance = loan_amount
-    total_paid = 0.0
-    total_interest = 0.0
-
-    yearly_balances = []
-    yearly_interest_paid = []
-    yearly_principal_paid = []
-    yearly_total_paid = []
-
-    current_year_interest = 0.0
-    current_year_principal = 0.0
-    current_year_total_paid = 0.0
-    payment_number = 0
-
-    while balance > 1e-8:
-        payment_number += 1
-
-        interest = balance * monthly_interest_rate
-        principal = monthly_payment - interest
-
-        if principal > balance:
-            principal = balance
-            monthly_payment_actual = interest + principal
-        else:
-            monthly_payment_actual = monthly_payment
-
-        balance -= principal
-        total_paid += monthly_payment_actual
-        total_interest += interest
-
-        current_year_interest += interest
-        current_year_principal += principal
-        current_year_total_paid += monthly_payment_actual
-
-        if abs(balance) < 1e-8:
-            balance = 0.0
-
-        if payment_number % 12 == 0 or balance == 0.0:
-            yearly_balances.append(round(balance, 2))
-            yearly_interest_paid.append(round(current_year_interest, 2))
-            yearly_principal_paid.append(round(current_year_principal, 2))
-            yearly_total_paid.append(round(current_year_total_paid, 2))
-
-            current_year_interest = 0.0
-            current_year_principal = 0.0
-            current_year_total_paid = 0.0
-
-    years_needed = payment_number // 12
-    remaining_months = payment_number % 12
-    years_list = list(range(1, len(yearly_balances) + 1))
-
-    yearly_df = pd.DataFrame({
-        t["year"]: years_list,
-        t["remaining_balance_eur"]: yearly_balances,
-        t["interest_paid_eur"]: yearly_interest_paid,
-        t["principal_repaid_eur"]: yearly_principal_paid,
-        t["total_paid_eur"]: yearly_total_paid,
-    })
-
-    yearly_df[t["interest_share_pct"]] = (
-        yearly_df[t["interest_paid_eur"]] / yearly_df[t["total_paid_eur"]] * 100
-    ).round(1)
-
-    yearly_df[t["principal_share_pct"]] = (
-        yearly_df[t["principal_repaid_eur"]] / yearly_df[t["total_paid_eur"]] * 100
-    ).round(1)
-
-    return {
-        "calculation_type": calculation_type,
-        "loan_amount": round(loan_amount, 2),
-        "annual_interest_rate": annual_interest_rate,
-        "monthly_payment": round(monthly_payment, 2),
-        "exact_monthly_payment": exact_monthly_payment,
-        "total_paid": round(total_paid, 2),
-        "total_interest": round(total_interest, 2),
-        "months_needed": payment_number,
-        "years_needed": years_needed,
-        "remaining_months": remaining_months,
-        "yearly_df": yearly_df,
-    }
-
-
 def plot_balance_interactive(yearly_df: pd.DataFrame, t: dict):
     fig = px.line(
         yearly_df,
@@ -388,7 +278,7 @@ def plot_balance_interactive(yearly_df: pd.DataFrame, t: dict):
 
 
 def plot_total_principal_vs_interest(
-    loan_amount: float,
+    principal_repaid_total: float,
     total_interest: float,
     total_paid: float,
     t: dict,
@@ -397,7 +287,7 @@ def plot_total_principal_vs_interest(
         data=[
             go.Pie(
                 labels=[t["principal"], t["interest"]],
-                values=[loan_amount, total_interest],
+                values=[principal_repaid_total, total_interest],
                 hole=0.6,
                 texttemplate=t["pie_texttemplate"],
                 hovertemplate=t["pie_hovertemplate"],
@@ -520,6 +410,8 @@ def initialize_state():
         "annual_interest_rate_input": "",
         "years_input": "",
         "monthly_payment_input": "",
+        "annual_lump_sum_input": "",
+        "residual_balance_input": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -531,30 +423,30 @@ def clear_result_state():
     st.session_state.result_mode = None
 
 
-def render_summary(result: dict, show_exact_payment: bool, t: dict):
+def render_summary(result: dict, t: dict):
     st.subheader(t["summary"])
-
-    formatted_time = format_time_duration(
-        result["years_needed"],
-        result["remaining_months"],
-        t,
-    )
 
     col1, col2 = st.columns(2)
     col1.metric(t["monthly_payment_metric"], f"€{result['monthly_payment']:,.2f}")
-    col2.metric(t["time_needed_metric"], formatted_time)
+    col2.metric(t["total_interest_metric"], f"€{result['total_interest']:,.0f}")
 
     col3, col4 = st.columns(2)
     col3.metric(t["total_paid_metric"], f"€{result['total_paid']:,.0f}")
-    col4.metric(t["total_interest_metric"], f"€{result['total_interest']:,.0f}")
+    col4.metric(t["residual_balance_metric"], f"€{result['residual_balance_target']:,.2f}")
 
-    if show_exact_payment:
+    if result["calculation_type"] == t["monthly_payment_mode"]:
         st.caption(
             t["exact_monthly_payment_caption"].format(
                 value=result["exact_monthly_payment"]
             )
         )
-    else:
+        st.caption(
+            t["residual_balance_caption"].format(
+                value=result.get("residual_balance_target", 0.0)
+            )
+        )
+
+    elif result["calculation_type"] == t["payoff_time_mode"]:
         st.caption(
             t["payoff_caption"].format(
                 payment=result["monthly_payment"],
@@ -562,6 +454,38 @@ def render_summary(result: dict, show_exact_payment: bool, t: dict):
                 months=result["remaining_months"],
             )
         )
+        st.caption(
+            t["residual_balance_caption"].format(
+                value=result.get("residual_balance_target", 0.0)
+            )
+        )
+
+    elif result["calculation_type"] == t["remaining_balance_mode"]:
+        st.caption(
+            t["balance_after_term_caption"].format(
+                years=result["input_years"],
+                payment=result["monthly_payment"],
+                balance=result["residual_balance_target"],
+            )
+        )
+
+    if result.get("annual_lump_sum", 0) > 0:
+        st.caption(
+            t["lump_sum_details_caption"].format(
+                base=result["base_monthly_payment"],
+                lump_sum=result["annual_lump_sum"],
+            )
+        )
+
+        comparison = result.get("comparison")
+        if comparison:
+            st.caption(
+                t["lump_sum_savings_caption"].format(
+                    interest_saved=comparison["interest_saved"],
+                    years=comparison["years_saved"],
+                    months=comparison["remaining_months_saved"],
+                )
+            )
 
 
 st.set_page_config(layout="centered", page_title="Mortgage Calculator")
@@ -578,6 +502,7 @@ t = TRANSLATIONS[language]
 mode_options = {
     t["monthly_payment_mode"]: "monthly",
     t["payoff_time_mode"]: "payoff",
+    t["remaining_balance_mode"]: "balance_after_term",
 }
 
 st.title(t["app_title"])
@@ -614,38 +539,72 @@ with st.form("main_form"):
     )
 
     if selected_mode == "monthly":
-        third_input = st.text_input(
+        first_dynamic_input = st.text_input(
             t["years"],
             value=st.session_state.years_input,
             placeholder=t["placeholder_years"],
             key="years_widget",
         )
+        second_dynamic_input = st.text_input(
+            t["residual_balance"],
+            value=st.session_state.residual_balance_input,
+            placeholder=t["placeholder_residual_balance"],
+            key="residual_balance_widget",
+        )
+
+    elif selected_mode == "payoff":
+        first_dynamic_input = st.text_input(
+            t["monthly_payment"],
+            value=st.session_state.monthly_payment_input,
+            placeholder=t["placeholder_payment"],
+            key="payment_widget",
+        )
+        second_dynamic_input = st.text_input(
+            t["residual_balance"],
+            value=st.session_state.residual_balance_input,
+            placeholder=t["placeholder_residual_balance"],
+            key="residual_balance_widget",
+        )
+
     else:
-        third_input = st.text_input(
+        first_dynamic_input = st.text_input(
+            t["years"],
+            value=st.session_state.years_input,
+            placeholder=t["placeholder_years"],
+            key="years_widget",
+        )
+        second_dynamic_input = st.text_input(
             t["monthly_payment"],
             value=st.session_state.monthly_payment_input,
             placeholder=t["placeholder_payment"],
             key="payment_widget",
         )
 
+    annual_lump_sum_input = st.text_input(
+        t["annual_lump_sum"],
+        value=st.session_state.annual_lump_sum_input,
+        placeholder=t["placeholder_lump_sum"],
+        key="lump_sum_widget",
+    )
+
+    parsed_loan = None
+    parsed_rate = None
+
+    try:
+        if loan_amount_input.strip():
+            parsed_loan = parse_number(loan_amount_input)
+    except ValueError:
         parsed_loan = None
+
+    try:
+        if annual_interest_rate_input.strip():
+            parsed_rate = parse_number(annual_interest_rate_input)
+    except ValueError:
         parsed_rate = None
 
-        try:
-            if loan_amount_input.strip():
-                parsed_loan = parse_number(loan_amount_input)
-        except ValueError:
-            parsed_loan = None
-
-        try:
-            if annual_interest_rate_input.strip():
-                parsed_rate = parse_number(annual_interest_rate_input)
-        except ValueError:
-            parsed_rate = None
-
-        if parsed_loan is not None and parsed_rate is not None and parsed_loan > 0 and parsed_rate >= 0:
-            live_minimum_payment = math.ceil(get_minimum_monthly_payment(parsed_loan, parsed_rate) * 100) / 100
-            st.caption(t["minimum_payment_live_hint"].format(value=live_minimum_payment))
+    if parsed_loan is not None and parsed_rate is not None and parsed_loan > 0 and parsed_rate >= 0:
+        live_minimum_payment = round(get_minimum_monthly_payment(parsed_loan, parsed_rate), 2)
+        st.caption(t["minimum_payment_live_hint"].format(value=live_minimum_payment))
 
     submitted = st.form_submit_button(t["calculate"], use_container_width=True)
 
@@ -654,11 +613,7 @@ if submitted:
 
     st.session_state.loan_amount_input = loan_amount_input
     st.session_state.annual_interest_rate_input = annual_interest_rate_input
-
-    if selected_mode == "monthly":
-        st.session_state.years_input = third_input
-    else:
-        st.session_state.monthly_payment_input = third_input
+    st.session_state.annual_lump_sum_input = annual_lump_sum_input
 
     field_errors = []
 
@@ -670,14 +625,89 @@ if submitted:
     if error:
         field_errors.append(error)
 
+    annual_lump_sum, error = validate_optional_float_field(
+        annual_lump_sum_input,
+        t["annual_lump_sum"],
+        t,
+    )
+    if error:
+        field_errors.append(error)
+
     if selected_mode == "monthly":
-        third_value, error = validate_int_field(third_input, t["years"], t)
+        st.session_state.years_input = first_dynamic_input
+        st.session_state.residual_balance_input = second_dynamic_input
+
+        years, error = validate_int_field(first_dynamic_input, t["years"], t)
         if error:
             field_errors.append(error)
+
+        residual_balance_target, error = validate_optional_float_field(
+            second_dynamic_input,
+            t["residual_balance"],
+            t,
+        )
+        if error:
+            field_errors.append(error)
+
+        if years is not None and years <= 0:
+            field_errors.append(t["years_error"])
+
+        if residual_balance_target is not None and residual_balance_target < 0:
+            field_errors.append(t["residual_balance_error"])
+
+        if (
+            loan_amount is not None
+            and residual_balance_target is not None
+            and residual_balance_target >= loan_amount
+        ):
+            field_errors.append(t["residual_balance_too_high_error"])
+
+    elif selected_mode == "payoff":
+        st.session_state.monthly_payment_input = first_dynamic_input
+        st.session_state.residual_balance_input = second_dynamic_input
+
+        monthly_payment, error = validate_float_field(first_dynamic_input, t["monthly_payment"], t)
+        if error:
+            field_errors.append(error)
+
+        residual_balance_target, error = validate_optional_float_field(
+            second_dynamic_input,
+            t["residual_balance"],
+            t,
+        )
+        if error:
+            field_errors.append(error)
+
+        if monthly_payment is not None and monthly_payment <= 0:
+            field_errors.append(t["monthly_payment_error"])
+
+        if residual_balance_target is not None and residual_balance_target < 0:
+            field_errors.append(t["residual_balance_error"])
+
+        if (
+            loan_amount is not None
+            and residual_balance_target is not None
+            and residual_balance_target >= loan_amount
+        ):
+            field_errors.append(t["residual_balance_too_high_error"])
+
     else:
-        third_value, error = validate_float_field(third_input, t["monthly_payment"], t)
+        st.session_state.years_input = first_dynamic_input
+        st.session_state.monthly_payment_input = second_dynamic_input
+
+        years, error = validate_int_field(first_dynamic_input, t["years"], t)
         if error:
             field_errors.append(error)
+
+        monthly_payment, error = validate_float_field(second_dynamic_input, t["monthly_payment"], t)
+        if error:
+            field_errors.append(error)
+
+        if years is not None and years <= 0:
+            field_errors.append(t["years_error"])
+
+        if monthly_payment is not None and monthly_payment <= 0:
+            field_errors.append(t["monthly_payment_error"])
 
     if loan_amount is not None and loan_amount <= 0:
         field_errors.append(t["loan_amount_error"])
@@ -685,12 +715,8 @@ if submitted:
     if annual_interest_rate is not None and annual_interest_rate < 0:
         field_errors.append(t["interest_rate_error"])
 
-    if selected_mode == "monthly":
-        if third_value is not None and third_value <= 0:
-            field_errors.append(t["years_error"])
-    else:
-        if third_value is not None and third_value <= 0:
-            field_errors.append(t["monthly_payment_error"])
+    if annual_lump_sum is not None and annual_lump_sum < 0:
+        field_errors.append(t["annual_lump_sum_error"])
 
     if field_errors:
         for err in field_errors:
@@ -698,26 +724,70 @@ if submitted:
     else:
         try:
             if selected_mode == "monthly":
-                years = third_value
+                if annual_lump_sum > 0:
+                    base_result = calculate_mortgage_by_term(
+                        loan_amount=loan_amount,
+                        annual_interest_rate=annual_interest_rate,
+                        years=years,
+                        t=t,
+                        residual_balance_target=residual_balance_target,
+                    )
+                    result = calculate_mortgage_by_term_with_lump_sum(
+                        loan_amount=loan_amount,
+                        annual_interest_rate=annual_interest_rate,
+                        years=years,
+                        annual_lump_sum=annual_lump_sum,
+                        t=t,
+                        residual_balance_target=residual_balance_target,
+                    )
+                    result["comparison"] = calculate_lump_sum_impact(base_result, result)
+                    st.session_state.result = result
+                else:
+                    st.session_state.result = calculate_mortgage_by_term(
+                        loan_amount=loan_amount,
+                        annual_interest_rate=annual_interest_rate,
+                        years=years,
+                        t=t,
+                        residual_balance_target=residual_balance_target,
+                    )
 
-                st.session_state.result = calculate_mortgage_by_term(
-                    loan_amount=loan_amount,
-                    annual_interest_rate=annual_interest_rate,
-                    years=years,
-                    t=t,
-                )
-                st.session_state.result_mode = "monthly"
+            elif selected_mode == "payoff":
+                if annual_lump_sum > 0:
+                    base_result = calculate_mortgage_by_payment(
+                        loan_amount=loan_amount,
+                        annual_interest_rate=annual_interest_rate,
+                        monthly_payment=monthly_payment,
+                        t=t,
+                        residual_balance_target=residual_balance_target,
+                    )
+                    result = calculate_mortgage_by_payment_with_lump_sum(
+                        loan_amount=loan_amount,
+                        annual_interest_rate=annual_interest_rate,
+                        monthly_payment=monthly_payment,
+                        annual_lump_sum=annual_lump_sum,
+                        t=t,
+                        residual_balance_target=residual_balance_target,
+                    )
+                    result["comparison"] = calculate_lump_sum_impact(base_result, result)
+                    st.session_state.result = result
+                else:
+                    st.session_state.result = calculate_mortgage_by_payment(
+                        loan_amount=loan_amount,
+                        annual_interest_rate=annual_interest_rate,
+                        monthly_payment=monthly_payment,
+                        t=t,
+                        residual_balance_target=residual_balance_target,
+                    )
 
             else:
-                monthly_payment = third_value
-
-                st.session_state.result = calculate_mortgage_by_payment(
+                st.session_state.result = calculate_balance_after_term(
                     loan_amount=loan_amount,
                     annual_interest_rate=annual_interest_rate,
                     monthly_payment=monthly_payment,
+                    years=years,
                     t=t,
+                    annual_lump_sum=annual_lump_sum,
                 )
-                st.session_state.result_mode = "payoff"
 
         except ValueError as e:
             clear_result_state()
@@ -747,7 +817,6 @@ if result is not None:
     with tab_summary:
         render_summary(
             result=result,
-            show_exact_payment=(result["calculation_type"] == t["monthly_payment_mode"]),
             t=t,
         )
 
@@ -762,7 +831,7 @@ if result is not None:
         st.subheader(t["total_mortgage_cost"])
         st.plotly_chart(
             plot_total_principal_vs_interest(
-                result["loan_amount"],
+                result["principal_repaid_total"],
                 result["total_interest"],
                 result["total_paid"],
                 t,
