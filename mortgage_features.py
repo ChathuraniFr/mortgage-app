@@ -328,8 +328,6 @@ def calculate_mortgage_by_term(
         residual_balance_target=residual_balance_target,
     )
 
-    # Intentionally round up to the next cent so the fixed monthly payment
-    # always covers the exact amortizing payment and the loan is not underpaid.
     monthly_payment = math.ceil(exact_monthly_payment * 100) / 100
 
     return build_amortization_schedule(
@@ -378,8 +376,6 @@ def calculate_mortgage_by_term_with_lump_sum(
         residual_balance_target=residual_balance_target,
     )
 
-    # Intentionally round up to the next cent so the fixed monthly payment
-    # always covers the exact amortizing payment and the loan is not underpaid.
     monthly_payment = math.ceil(exact_monthly_payment * 100) / 100
 
     return build_amortization_schedule(

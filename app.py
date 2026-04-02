@@ -12,6 +12,17 @@ from mortgage_features import (
     calculate_mortgage_by_term_with_lump_sum,
     get_minimum_monthly_payment,
 )
+from property_compare import compare_properties, format_comparison_table
+from property_import import build_manual_listing, import_properties_from_uploaded_file
+from property_models import PropertyListing
+from property_storage import (
+    clear_properties,
+    get_saved_properties,
+    initialize_property_storage,
+    remove_property,
+    save_many_properties,
+    save_property,
+)
 
 
 TRANSLATIONS = {
@@ -107,6 +118,60 @@ TRANSLATIONS = {
         "results_section": "Results",
         "lump_sum_details_caption": "Base monthly payment: €{base:,.2f} | Annual lump sum: €{lump_sum:,.2f}",
         "lump_sum_savings_caption": "The annual lump sum saves €{interest_saved:,.2f} in interest and {years} years and {months} months in time.",
+        "property_assistant_title": "Property Assistant",
+        "property_assistant_info": "Save properties manually or import them, then compare them with mortgage scenarios.",
+        "property_manual_entry_tab": "Manual entry",
+        "property_import_tab": "Import",
+        "property_saved_tab": "Saved properties",
+        "property_compare_tab": "Compare properties",
+        "property_title": "Title",
+        "property_city": "City",
+        "property_postal_code": "Postal code",
+        "property_address": "Address",
+        "property_price": "Purchase price (€)",
+        "property_living_area": "Living area (sqm)",
+        "property_plot_area": "Plot area (sqm)",
+        "property_rooms": "Rooms",
+        "property_year_built": "Year built",
+        "property_type_label": "Property type",
+        "property_condition": "Condition",
+        "property_heating_type": "Heating type",
+        "property_energy_source": "Main energy source",
+        "property_energy_class": "Energy efficiency class",
+        "property_additional_costs": "Additional costs (€)",
+        "property_url": "Listing URL",
+        "property_description": "Description",
+        "property_save_button": "Save property",
+        "property_saved_success": "Property saved.",
+        "property_minimum_fields_error": "Please enter at least title, city, and a valid purchase price.",
+        "property_import_file": "Upload CSV, XLSX, HTML, or PDF",
+        "property_import_button": "Import properties",
+        "property_import_success": "Imported {count} properties.",
+        "property_import_error": "Import failed: {error}",
+        "property_import_no_file": "Please upload a CSV, XLSX, HTML, or PDF file first.",
+        "property_saved_empty": "No properties saved yet.",
+        "property_remove_select": "Select property to remove",
+        "property_remove_button": "Remove selected property",
+        "property_remove_success": "Property removed.",
+        "property_clear_button": "Clear all properties",
+        "property_clear_success": "All properties removed.",
+        "comparison_interest_rate": "Comparison interest rate (%)",
+        "comparison_years": "Comparison years",
+        "comparison_down_payment": "Down payment (€)",
+        "comparison_closing_cost_rate": "Estimated closing cost rate (%)",
+        "comparison_residual_balance": "Target residual balance (€)",
+        "comparison_run_button": "Run comparison",
+        "comparison_results_info": "Set the financing assumptions and run the comparison.",
+        "property_source": "Source",
+        "property_external_id": "ID",
+        "property_comparison_sort_hint": "Results are sorted by estimated monthly payment and purchase price.",
+        "main_tab_mortgage": "Mortgage Calculator",
+        "main_tab_property": "Property Assistant",
+        "import_preview_title": "Import preview",
+        "import_preview_info": "Review and edit the extracted values before saving.",
+        "import_preview_save_button": "Save previewed property",
+        "import_preview_no_data": "No import preview available yet.",
+        "import_preview_saved_success": "Previewed property saved.",
     },
     "Deutsch": {
         "app_title": "Kreditrechner",
@@ -200,6 +265,60 @@ TRANSLATIONS = {
         "results_section": "Ergebnisse",
         "lump_sum_details_caption": "Normale Monatsrate: €{base:,.2f} | Jährliche Sondertilgung: €{lump_sum:,.2f}",
         "lump_sum_savings_caption": "Die jährliche Sondertilgung spart €{interest_saved:,.2f} Zinsen und {years} Jahre und {months} Monate Zeit.",
+        "property_assistant_title": "Immobilien-Assistent",
+        "property_assistant_info": "Speichere Immobilien manuell oder importiere sie und vergleiche sie anschließend mit Finanzierungsszenarien.",
+        "property_manual_entry_tab": "Manuell",
+        "property_import_tab": "Import",
+        "property_saved_tab": "Gespeicherte Immobilien",
+        "property_compare_tab": "Immobilien vergleichen",
+        "property_title": "Titel",
+        "property_city": "Stadt",
+        "property_postal_code": "PLZ",
+        "property_address": "Adresse",
+        "property_price": "Kaufpreis (€)",
+        "property_living_area": "Wohnfläche (qm)",
+        "property_plot_area": "Grundstücksfläche (qm)",
+        "property_rooms": "Zimmer",
+        "property_year_built": "Baujahr",
+        "property_type_label": "Objektart",
+        "property_condition": "Objektzustand",
+        "property_heating_type": "Heizungsart",
+        "property_energy_source": "Wesentliche Energieträger",
+        "property_energy_class": "Energieeffizienzklasse",
+        "property_additional_costs": "Zusätzliche Kosten (€)",
+        "property_url": "Inserats-URL",
+        "property_description": "Beschreibung",
+        "property_save_button": "Immobilie speichern",
+        "property_saved_success": "Immobilie gespeichert.",
+        "property_minimum_fields_error": "Bitte gib mindestens Titel, Stadt und einen gültigen Kaufpreis ein.",
+        "property_import_file": "CSV, XLSX, HTML oder PDF hochladen",
+        "property_import_button": "Immobilien importieren",
+        "property_import_success": "{count} Immobilien importiert.",
+        "property_import_error": "Import fehlgeschlagen: {error}",
+        "property_import_no_file": "Bitte lade zuerst eine CSV-, XLSX-, HTML- oder PDF-Datei hoch.",
+        "property_saved_empty": "Noch keine Immobilien gespeichert.",
+        "property_remove_select": "Immobilie zum Löschen auswählen",
+        "property_remove_button": "Ausgewählte Immobilie löschen",
+        "property_remove_success": "Immobilie gelöscht.",
+        "property_clear_button": "Alle Immobilien löschen",
+        "property_clear_success": "Alle Immobilien gelöscht.",
+        "comparison_interest_rate": "Vergleichszinssatz (%)",
+        "comparison_years": "Vergleichslaufzeit",
+        "comparison_down_payment": "Eigenkapital (€)",
+        "comparison_closing_cost_rate": "Geschätzte Kaufnebenkosten (%)",
+        "comparison_residual_balance": "Ziel-Restschuld (€)",
+        "comparison_run_button": "Vergleich starten",
+        "comparison_results_info": "Lege die Finanzierungsannahmen fest und starte dann den Vergleich.",
+        "property_source": "Quelle",
+        "property_external_id": "ID",
+        "property_comparison_sort_hint": "Die Ergebnisse sind nach geschätzter Monatsrate und Kaufpreis sortiert.",
+        "main_tab_mortgage": "Kreditrechner",
+        "main_tab_property": "Immobilien-Assistent",
+        "import_preview_title": "Import-Vorschau",
+        "import_preview_info": "Prüfe und bearbeite die erkannten Werte vor dem Speichern.",
+        "import_preview_save_button": "Vorschau-Immobilie speichern",
+        "import_preview_no_data": "Noch keine Import-Vorschau vorhanden.",
+        "import_preview_saved_success": "Vorschau-Immobilie gespeichert.",
     },
 }
 
@@ -412,6 +531,7 @@ def initialize_state():
         "monthly_payment_input": "",
         "annual_lump_sum_input": "",
         "residual_balance_input": "",
+        "import_preview_listing": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -488,8 +608,765 @@ def render_summary(result: dict, t: dict):
             )
 
 
+def render_mortgage_calculator(t: dict):
+    mode_options = {
+        t["monthly_payment_mode"]: "monthly",
+        t["payoff_time_mode"]: "payoff",
+        t["remaining_balance_mode"]: "balance_after_term",
+    }
+
+    st.title(t["app_title"])
+
+    selected_mode_label = st.radio(
+        t["calculation_type"],
+        options=list(mode_options.keys()),
+        horizontal=True,
+    )
+
+    selected_mode = mode_options[selected_mode_label]
+
+    if st.session_state.selected_mode is None:
+        st.session_state.selected_mode = selected_mode
+    elif st.session_state.selected_mode != selected_mode:
+        st.session_state.selected_mode = selected_mode
+        clear_result_state()
+
+    st.subheader(t["input_section"])
+
+    with st.form("main_form"):
+        loan_amount_input = st.text_input(
+            t["loan_amount"],
+            value=st.session_state.loan_amount_input,
+            placeholder=t["placeholder_loan"],
+            key="loan_amount_widget",
+        )
+
+        annual_interest_rate_input = st.text_input(
+            t["interest_rate"],
+            value=st.session_state.annual_interest_rate_input,
+            placeholder=t["placeholder_rate"],
+            key="interest_rate_widget",
+        )
+
+        if selected_mode == "monthly":
+            first_dynamic_input = st.text_input(
+                t["years"],
+                value=st.session_state.years_input,
+                placeholder=t["placeholder_years"],
+                key="years_widget",
+            )
+            second_dynamic_input = st.text_input(
+                t["residual_balance"],
+                value=st.session_state.residual_balance_input,
+                placeholder=t["placeholder_residual_balance"],
+                key="residual_balance_widget",
+            )
+
+        elif selected_mode == "payoff":
+            first_dynamic_input = st.text_input(
+                t["monthly_payment"],
+                value=st.session_state.monthly_payment_input,
+                placeholder=t["placeholder_payment"],
+                key="payment_widget",
+            )
+            second_dynamic_input = st.text_input(
+                t["residual_balance"],
+                value=st.session_state.residual_balance_input,
+                placeholder=t["placeholder_residual_balance"],
+                key="residual_balance_widget",
+            )
+
+        else:
+            first_dynamic_input = st.text_input(
+                t["years"],
+                value=st.session_state.years_input,
+                placeholder=t["placeholder_years"],
+                key="years_widget",
+            )
+            second_dynamic_input = st.text_input(
+                t["monthly_payment"],
+                value=st.session_state.monthly_payment_input,
+                placeholder=t["placeholder_payment"],
+                key="payment_widget",
+            )
+
+        annual_lump_sum_input = st.text_input(
+            t["annual_lump_sum"],
+            value=st.session_state.annual_lump_sum_input,
+            placeholder=t["placeholder_lump_sum"],
+            key="lump_sum_widget",
+        )
+
+        parsed_loan = None
+        parsed_rate = None
+
+        try:
+            if loan_amount_input.strip():
+                parsed_loan = parse_number(loan_amount_input)
+        except ValueError:
+            parsed_loan = None
+
+        try:
+            if annual_interest_rate_input.strip():
+                parsed_rate = parse_number(annual_interest_rate_input)
+        except ValueError:
+            parsed_rate = None
+
+        if parsed_loan is not None and parsed_rate is not None and parsed_loan > 0 and parsed_rate >= 0:
+            live_minimum_payment = round(get_minimum_monthly_payment(parsed_loan, parsed_rate), 2)
+            st.caption(t["minimum_payment_live_hint"].format(value=live_minimum_payment))
+
+        submitted = st.form_submit_button(t["calculate"], use_container_width=True)
+
+    if submitted:
+        clear_result_state()
+
+        st.session_state.loan_amount_input = loan_amount_input
+        st.session_state.annual_interest_rate_input = annual_interest_rate_input
+        st.session_state.annual_lump_sum_input = annual_lump_sum_input
+
+        field_errors = []
+
+        loan_amount, error = validate_float_field(loan_amount_input, t["loan_amount"], t)
+        if error:
+            field_errors.append(error)
+
+        annual_interest_rate, error = validate_float_field(annual_interest_rate_input, t["interest_rate"], t)
+        if error:
+            field_errors.append(error)
+
+        annual_lump_sum, error = validate_optional_float_field(
+            annual_lump_sum_input,
+            t["annual_lump_sum"],
+            t,
+        )
+        if error:
+            field_errors.append(error)
+
+        if selected_mode == "monthly":
+            st.session_state.years_input = first_dynamic_input
+            st.session_state.residual_balance_input = second_dynamic_input
+
+            years, error = validate_int_field(first_dynamic_input, t["years"], t)
+            if error:
+                field_errors.append(error)
+
+            residual_balance_target, error = validate_optional_float_field(
+                second_dynamic_input,
+                t["residual_balance"],
+                t,
+            )
+            if error:
+                field_errors.append(error)
+
+            if years is not None and years <= 0:
+                field_errors.append(t["years_error"])
+
+            if residual_balance_target is not None and residual_balance_target < 0:
+                field_errors.append(t["residual_balance_error"])
+
+            if (
+                loan_amount is not None
+                and residual_balance_target is not None
+                and residual_balance_target >= loan_amount
+            ):
+                field_errors.append(t["residual_balance_too_high_error"])
+
+        elif selected_mode == "payoff":
+            st.session_state.monthly_payment_input = first_dynamic_input
+            st.session_state.residual_balance_input = second_dynamic_input
+
+            monthly_payment, error = validate_float_field(first_dynamic_input, t["monthly_payment"], t)
+            if error:
+                field_errors.append(error)
+
+            residual_balance_target, error = validate_optional_float_field(
+                second_dynamic_input,
+                t["residual_balance"],
+                t,
+            )
+            if error:
+                field_errors.append(error)
+
+            if monthly_payment is not None and monthly_payment <= 0:
+                field_errors.append(t["monthly_payment_error"])
+
+            if residual_balance_target is not None and residual_balance_target < 0:
+                field_errors.append(t["residual_balance_error"])
+
+            if (
+                loan_amount is not None
+                and residual_balance_target is not None
+                and residual_balance_target >= loan_amount
+            ):
+                field_errors.append(t["residual_balance_too_high_error"])
+
+        else:
+            st.session_state.years_input = first_dynamic_input
+            st.session_state.monthly_payment_input = second_dynamic_input
+
+            years, error = validate_int_field(first_dynamic_input, t["years"], t)
+            if error:
+                field_errors.append(error)
+
+            monthly_payment, error = validate_float_field(second_dynamic_input, t["monthly_payment"], t)
+            if error:
+                field_errors.append(error)
+
+            if years is not None and years <= 0:
+                field_errors.append(t["years_error"])
+
+            if monthly_payment is not None and monthly_payment <= 0:
+                field_errors.append(t["monthly_payment_error"])
+
+        if loan_amount is not None and loan_amount <= 0:
+            field_errors.append(t["loan_amount_error"])
+
+        if annual_interest_rate is not None and annual_interest_rate < 0:
+            field_errors.append(t["interest_rate_error"])
+
+        if annual_lump_sum is not None and annual_lump_sum < 0:
+            field_errors.append(t["annual_lump_sum_error"])
+
+        if field_errors:
+            for err in field_errors:
+                st.error(err)
+        else:
+            try:
+                if selected_mode == "monthly":
+                    if annual_lump_sum > 0:
+                        base_result = calculate_mortgage_by_term(
+                            loan_amount=loan_amount,
+                            annual_interest_rate=annual_interest_rate,
+                            years=years,
+                            t=t,
+                            residual_balance_target=residual_balance_target,
+                        )
+                        result = calculate_mortgage_by_term_with_lump_sum(
+                            loan_amount=loan_amount,
+                            annual_interest_rate=annual_interest_rate,
+                            years=years,
+                            annual_lump_sum=annual_lump_sum,
+                            t=t,
+                            residual_balance_target=residual_balance_target,
+                        )
+                        result["comparison"] = calculate_lump_sum_impact(base_result, result)
+                        st.session_state.result = result
+                    else:
+                        st.session_state.result = calculate_mortgage_by_term(
+                            loan_amount=loan_amount,
+                            annual_interest_rate=annual_interest_rate,
+                            years=years,
+                            t=t,
+                            residual_balance_target=residual_balance_target,
+                        )
+
+                elif selected_mode == "payoff":
+                    if annual_lump_sum > 0:
+                        base_result = calculate_mortgage_by_payment(
+                            loan_amount=loan_amount,
+                            annual_interest_rate=annual_interest_rate,
+                            monthly_payment=monthly_payment,
+                            t=t,
+                            residual_balance_target=residual_balance_target,
+                        )
+                        result = calculate_mortgage_by_payment_with_lump_sum(
+                            loan_amount=loan_amount,
+                            annual_interest_rate=annual_interest_rate,
+                            monthly_payment=monthly_payment,
+                            annual_lump_sum=annual_lump_sum,
+                            t=t,
+                            residual_balance_target=residual_balance_target,
+                        )
+                        result["comparison"] = calculate_lump_sum_impact(base_result, result)
+                        st.session_state.result = result
+                    else:
+                        st.session_state.result = calculate_mortgage_by_payment(
+                            loan_amount=loan_amount,
+                            annual_interest_rate=annual_interest_rate,
+                            monthly_payment=monthly_payment,
+                            t=t,
+                            residual_balance_target=residual_balance_target,
+                        )
+
+                else:
+                    st.session_state.result = calculate_balance_after_term(
+                        loan_amount=loan_amount,
+                        annual_interest_rate=annual_interest_rate,
+                        monthly_payment=monthly_payment,
+                        years=years,
+                        t=t,
+                        annual_lump_sum=annual_lump_sum,
+                    )
+
+            except ValueError as e:
+                clear_result_state()
+
+                message = str(e).strip()
+                if message:
+                    st.error(message)
+                else:
+                    st.error(t["invalid_numeric_error"])
+
+    result = st.session_state.result
+
+    st.subheader(t["results_section"])
+
+    if result is not None:
+        tab_summary, tab_balance, tab_total_cost, tab_yearly_cost, tab_simple, tab_full = st.tabs(
+            [
+                t["summary"],
+                t["remaining_balance_graph"],
+                t["total_mortgage_cost"],
+                t["mortgage_cost_by_year"],
+                t["simple_explanation_table"],
+                t["full_yearly_data_table"],
+            ]
+        )
+
+        with tab_summary:
+            render_summary(
+                result=result,
+                t=t,
+            )
+
+        with tab_balance:
+            st.subheader(t["remaining_balance_graph"])
+            st.plotly_chart(
+                plot_balance_interactive(result["yearly_df"], t),
+                use_container_width=True,
+            )
+
+        with tab_total_cost:
+            st.subheader(t["total_mortgage_cost"])
+            st.plotly_chart(
+                plot_total_principal_vs_interest(
+                    result["principal_repaid_total"],
+                    result["total_interest"],
+                    result["total_paid"],
+                    t,
+                ),
+                use_container_width=True,
+            )
+
+        with tab_yearly_cost:
+            st.subheader(t["mortgage_cost_by_year"])
+            st.plotly_chart(
+                plot_yearly_mortgage_cost(result["yearly_df"], t),
+                use_container_width=True,
+            )
+
+        with tab_simple:
+            st.subheader(t["simple_explanation_table"])
+            st.dataframe(
+                build_simple_explanation_table(result["yearly_df"], t),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        with tab_full:
+            st.subheader(t["full_yearly_data_table"])
+            st.dataframe(
+                format_full_table(result["yearly_df"], t),
+                use_container_width=True,
+                hide_index=True,
+            )
+    else:
+        st.info(t["enter_values_info"])
+
+
+def render_property_manual_entry(t: dict):
+    st.subheader(t["property_manual_entry_tab"])
+
+    with st.form("property_manual_form"):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            title = st.text_input(t["property_title"])
+            city = st.text_input(t["property_city"])
+            postal_code = st.text_input(t["property_postal_code"])
+            address = st.text_input(t["property_address"])
+            price_eur = st.number_input(
+                t["property_price"],
+                min_value=0.0,
+                value=0.0,
+                step=1000.0,
+            )
+            living_area_sqm = st.number_input(
+                t["property_living_area"],
+                min_value=0.0,
+                value=0.0,
+                step=1.0,
+            )
+            plot_area_sqm = st.number_input(
+                t["property_plot_area"],
+                min_value=0.0,
+                value=0.0,
+                step=1.0,
+            )
+            rooms = st.number_input(
+                t["property_rooms"],
+                min_value=0.0,
+                value=0.0,
+                step=0.5,
+            )
+
+        with col2:
+            year_built = st.number_input(
+                t["property_year_built"],
+                min_value=0,
+                value=0,
+                step=1,
+            )
+            property_type = st.text_input(t["property_type_label"])
+            condition = st.text_input(t["property_condition"])
+            heating_type = st.text_input(t["property_heating_type"])
+            energy_source = st.text_input(t["property_energy_source"])
+            energy_class = st.text_input(t["property_energy_class"])
+            additional_costs_eur = st.number_input(
+                t["property_additional_costs"],
+                min_value=0.0,
+                value=0.0,
+                step=1000.0,
+            )
+
+        url = st.text_input(t["property_url"])
+        description = st.text_area(t["property_description"])
+
+        submitted = st.form_submit_button(t["property_save_button"], use_container_width=True)
+
+    if submitted:
+        if not title.strip() or not city.strip() or price_eur <= 0:
+            st.error(t["property_minimum_fields_error"])
+            return
+
+        listing = build_manual_listing(
+            title=title,
+            city=city,
+            price_eur=price_eur,
+            living_area_sqm=living_area_sqm if living_area_sqm > 0 else None,
+            rooms=rooms if rooms > 0 else None,
+            year_built=year_built if year_built > 0 else None,
+            property_type=property_type if property_type.strip() else None,
+            postal_code=postal_code if postal_code.strip() else None,
+            address=address if address.strip() else None,
+            plot_area_sqm=plot_area_sqm if plot_area_sqm > 0 else None,
+            condition=condition if condition.strip() else None,
+            heating_type=heating_type if heating_type.strip() else None,
+            energy_source=energy_source if energy_source.strip() else None,
+            energy_class=energy_class if energy_class.strip() else None,
+            additional_costs_eur=additional_costs_eur if additional_costs_eur > 0 else None,
+            url=url,
+            description=description if description.strip() else None,
+        )
+        save_property(listing)
+        st.success(t["property_saved_success"])
+
+
+def render_import_preview_form(t: dict):
+    st.subheader(t["import_preview_title"])
+    st.info(t["import_preview_info"])
+
+    preview = st.session_state.get("import_preview_listing")
+    if preview is None:
+        st.info(t["import_preview_no_data"])
+        return
+
+    with st.form("import_preview_form"):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            title = st.text_input(t["property_title"], value=preview.title)
+            city = st.text_input(t["property_city"], value=preview.city)
+            postal_code = st.text_input(t["property_postal_code"], value=preview.postal_code or "")
+            address = st.text_input(t["property_address"], value=preview.address or "")
+            price_eur = st.number_input(
+                t["property_price"],
+                min_value=0.0,
+                value=float(preview.price_eur or 0.0),
+                step=1000.0,
+            )
+            living_area_sqm = st.number_input(
+                t["property_living_area"],
+                min_value=0.0,
+                value=float(preview.living_area_sqm or 0.0),
+                step=1.0,
+            )
+            plot_area_sqm = st.number_input(
+                t["property_plot_area"],
+                min_value=0.0,
+                value=float(preview.plot_area_sqm or 0.0),
+                step=1.0,
+            )
+            rooms = st.number_input(
+                t["property_rooms"],
+                min_value=0.0,
+                value=float(preview.rooms or 0.0),
+                step=0.5,
+            )
+
+        with col2:
+            year_built = st.number_input(
+                t["property_year_built"],
+                min_value=0,
+                value=int(preview.year_built or 0),
+                step=1,
+            )
+            property_type = st.text_input(t["property_type_label"], value=preview.property_type or "")
+
+            # ✅ NEW FIELDS
+            house_subtype = st.text_input("House subtype", value=getattr(preview, "house_subtype", "") or "")
+
+            condition = st.text_input(t["property_condition"], value=preview.condition or "")
+            heating_type = st.text_input(t["property_heating_type"], value=preview.heating_type or "")
+            energy_source = st.text_input(t["property_energy_source"], value=preview.energy_source or "")
+            energy_class = st.text_input(t["property_energy_class"], value=preview.energy_class or "")
+
+            has_cellar = st.checkbox(
+                "Cellar / Keller",
+                value=bool(getattr(preview, "has_cellar", False)),
+            )
+            has_garage = st.checkbox(
+                "Garage",
+                value=bool(getattr(preview, "has_garage", False)),
+            )
+            has_parking_space = st.checkbox(
+                "Parking space / Stellplatz",
+                value=bool(getattr(preview, "has_parking_space", False)),
+            )
+
+            additional_costs_eur = st.number_input(
+                t["property_additional_costs"],
+                min_value=0.0,
+                value=float(preview.additional_costs_eur or 0.0),
+                step=1000.0,
+            )
+
+        url = st.text_input(t["property_url"], value=preview.url or "")
+        description = st.text_area(t["property_description"], value=preview.description or "")
+
+        submitted = st.form_submit_button(t["import_preview_save_button"], use_container_width=True)
+
+    if submitted:
+        if not title.strip() or not city.strip() or price_eur <= 0:
+            st.error(t["property_minimum_fields_error"])
+            return
+
+        listing = PropertyListing(
+            source=preview.source,
+            external_id=preview.external_id,
+            title=title.strip(),
+            city=city.strip(),
+            postal_code=postal_code.strip() if postal_code.strip() else None,
+            address=address.strip() if address.strip() else None,
+            price_eur=float(price_eur),
+            living_area_sqm=living_area_sqm if living_area_sqm > 0 else None,
+            plot_area_sqm=plot_area_sqm if plot_area_sqm > 0 else None,
+            rooms=rooms if rooms > 0 else None,
+            year_built=year_built if year_built > 0 else None,
+            property_type=property_type.strip() if property_type.strip() else None,
+
+            # ✅ NEW FIELDS (FIX FOR YOUR ERROR)
+            house_subtype=house_subtype.strip() if house_subtype.strip() else None,
+            has_cellar=has_cellar,
+            has_garage=has_garage,
+            has_parking_space=has_parking_space,
+
+            condition=condition.strip() if condition.strip() else None,
+            heating_type=heating_type.strip() if heating_type.strip() else None,
+            energy_source=energy_source.strip() if energy_source.strip() else None,
+            energy_class=energy_class.strip() if energy_class.strip() else None,
+
+            additional_costs_eur=additional_costs_eur if additional_costs_eur > 0 else None,
+            url=url.strip(),
+            description=description.strip() if description.strip() else None,
+        )
+
+        save_property(listing)
+        st.session_state.import_preview_listing = None
+        st.success(t["import_preview_saved_success"])
+
+
+def render_property_import_section(t: dict):
+    st.subheader(t["property_import_tab"])
+
+    uploaded_file = st.file_uploader(
+        t["property_import_file"],
+        type=["csv", "xlsx", "html", "htm", "pdf"],
+        key="property_import_uploader",
+    )
+
+    if st.button(t["property_import_button"], use_container_width=True):
+        if uploaded_file is None:
+            st.error(t["property_import_no_file"])
+            return
+
+        try:
+            listings = import_properties_from_uploaded_file(uploaded_file)
+
+            if not listings:
+                st.error(t["property_import_error"].format(error="No listing data found."))
+                return
+
+            first_listing = listings[0]
+            st.session_state.import_preview_listing = first_listing
+        except Exception as exc:
+            st.error(t["property_import_error"].format(error=exc))
+
+    render_import_preview_form(t)
+
+
+def render_saved_properties_section(t: dict):
+    st.subheader(t["property_saved_tab"])
+
+    listings = get_saved_properties()
+
+    if not listings:
+        st.info(t["property_saved_empty"])
+        return
+
+    rows = []
+    for item in listings:
+        rows.append(
+            {
+                t["property_external_id"]: item.external_id,
+                t["property_title"]: item.title,
+                t["property_city"]: item.city,
+                t["property_price"]: item.price_eur,
+                t["property_living_area"]: item.living_area_sqm,
+                t["property_plot_area"]: item.plot_area_sqm,
+                t["property_rooms"]: item.rooms,
+                t["property_year_built"]: item.year_built,
+                t["property_type_label"]: item.property_type,
+                t["property_condition"]: item.condition,
+                t["property_heating_type"]: item.heating_type,
+                t["property_energy_source"]: item.energy_source,
+                t["property_energy_class"]: item.energy_class,
+                t["property_source"]: item.source,
+                t["property_url"]: item.url,
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    remove_options = {f"{item.title} ({item.city})": item.external_id for item in listings}
+    selected_label = st.selectbox(
+        t["property_remove_select"],
+        options=[""] + list(remove_options.keys()),
+        key="property_remove_selectbox",
+    )
+
+    if selected_label:
+        if st.button(t["property_remove_button"], use_container_width=True):
+            remove_property(remove_options[selected_label])
+            st.success(t["property_remove_success"])
+            st.rerun()
+
+    if st.button(t["property_clear_button"], use_container_width=True):
+        clear_properties()
+        st.success(t["property_clear_success"])
+        st.rerun()
+
+
+def render_property_comparison_section(t: dict):
+    st.subheader(t["property_compare_tab"])
+
+    listings = get_saved_properties()
+
+    if not listings:
+        st.info(t["property_saved_empty"])
+        return
+
+    st.caption(t["comparison_results_info"])
+
+    with st.form("property_comparison_form"):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            annual_interest_rate = st.number_input(
+                t["comparison_interest_rate"],
+                min_value=0.0,
+                value=4.0,
+                step=0.1,
+            )
+            years = st.number_input(
+                t["comparison_years"],
+                min_value=1,
+                value=30,
+                step=1,
+            )
+            down_payment_eur = st.number_input(
+                t["comparison_down_payment"],
+                min_value=0.0,
+                value=50000.0,
+                step=1000.0,
+            )
+
+        with col2:
+            closing_cost_rate_pct = st.number_input(
+                t["comparison_closing_cost_rate"],
+                min_value=0.0,
+                value=10.0,
+                step=0.5,
+            )
+            residual_balance_target = st.number_input(
+                t["comparison_residual_balance"],
+                min_value=0.0,
+                value=0.0,
+                step=1000.0,
+            )
+
+        submitted = st.form_submit_button(t["comparison_run_button"], use_container_width=True)
+
+    if submitted:
+        comparison_df = compare_properties(
+            listings=listings,
+            annual_interest_rate=annual_interest_rate,
+            years=years,
+            t=t,
+            down_payment_eur=down_payment_eur,
+            closing_cost_rate_pct=closing_cost_rate_pct,
+            residual_balance_target=residual_balance_target,
+        )
+
+        st.caption(t["property_comparison_sort_hint"])
+        st.dataframe(
+            format_comparison_table(comparison_df),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+def render_property_assistant(t: dict):
+    st.title(t["property_assistant_title"])
+    st.info(t["property_assistant_info"])
+
+    tab_manual, tab_import, tab_saved, tab_compare = st.tabs(
+        [
+            t["property_manual_entry_tab"],
+            t["property_import_tab"],
+            t["property_saved_tab"],
+            t["property_compare_tab"],
+        ]
+    )
+
+    with tab_manual:
+        render_property_manual_entry(t)
+
+    with tab_import:
+        render_property_import_section(t)
+
+    with tab_saved:
+        render_saved_properties_section(t)
+
+    with tab_compare:
+        render_property_comparison_section(t)
+
+
 st.set_page_config(layout="centered", page_title="Mortgage Calculator")
 initialize_state()
+initialize_property_storage()
 
 language = st.selectbox(
     "Language / Sprache",
@@ -499,367 +1376,15 @@ language = st.selectbox(
 
 t = TRANSLATIONS[language]
 
-mode_options = {
-    t["monthly_payment_mode"]: "monthly",
-    t["payoff_time_mode"]: "payoff",
-    t["remaining_balance_mode"]: "balance_after_term",
-}
-
-st.title(t["app_title"])
-
-selected_mode_label = st.radio(
-    t["calculation_type"],
-    options=list(mode_options.keys()),
-    horizontal=True,
+main_tab_mortgage, main_tab_property = st.tabs(
+    [
+        t["main_tab_mortgage"],
+        t["main_tab_property"],
+    ]
 )
 
-selected_mode = mode_options[selected_mode_label]
+with main_tab_mortgage:
+    render_mortgage_calculator(t)
 
-if st.session_state.selected_mode is None:
-    st.session_state.selected_mode = selected_mode
-elif st.session_state.selected_mode != selected_mode:
-    st.session_state.selected_mode = selected_mode
-    clear_result_state()
-
-st.subheader(t["input_section"])
-
-with st.form("main_form"):
-    loan_amount_input = st.text_input(
-        t["loan_amount"],
-        value=st.session_state.loan_amount_input,
-        placeholder=t["placeholder_loan"],
-        key="loan_amount_widget",
-    )
-
-    annual_interest_rate_input = st.text_input(
-        t["interest_rate"],
-        value=st.session_state.annual_interest_rate_input,
-        placeholder=t["placeholder_rate"],
-        key="interest_rate_widget",
-    )
-
-    if selected_mode == "monthly":
-        first_dynamic_input = st.text_input(
-            t["years"],
-            value=st.session_state.years_input,
-            placeholder=t["placeholder_years"],
-            key="years_widget",
-        )
-        second_dynamic_input = st.text_input(
-            t["residual_balance"],
-            value=st.session_state.residual_balance_input,
-            placeholder=t["placeholder_residual_balance"],
-            key="residual_balance_widget",
-        )
-
-    elif selected_mode == "payoff":
-        first_dynamic_input = st.text_input(
-            t["monthly_payment"],
-            value=st.session_state.monthly_payment_input,
-            placeholder=t["placeholder_payment"],
-            key="payment_widget",
-        )
-        second_dynamic_input = st.text_input(
-            t["residual_balance"],
-            value=st.session_state.residual_balance_input,
-            placeholder=t["placeholder_residual_balance"],
-            key="residual_balance_widget",
-        )
-
-    else:
-        first_dynamic_input = st.text_input(
-            t["years"],
-            value=st.session_state.years_input,
-            placeholder=t["placeholder_years"],
-            key="years_widget",
-        )
-        second_dynamic_input = st.text_input(
-            t["monthly_payment"],
-            value=st.session_state.monthly_payment_input,
-            placeholder=t["placeholder_payment"],
-            key="payment_widget",
-        )
-
-    annual_lump_sum_input = st.text_input(
-        t["annual_lump_sum"],
-        value=st.session_state.annual_lump_sum_input,
-        placeholder=t["placeholder_lump_sum"],
-        key="lump_sum_widget",
-    )
-
-    parsed_loan = None
-    parsed_rate = None
-
-    try:
-        if loan_amount_input.strip():
-            parsed_loan = parse_number(loan_amount_input)
-    except ValueError:
-        parsed_loan = None
-
-    try:
-        if annual_interest_rate_input.strip():
-            parsed_rate = parse_number(annual_interest_rate_input)
-    except ValueError:
-        parsed_rate = None
-
-    if parsed_loan is not None and parsed_rate is not None and parsed_loan > 0 and parsed_rate >= 0:
-        live_minimum_payment = round(get_minimum_monthly_payment(parsed_loan, parsed_rate), 2)
-        st.caption(t["minimum_payment_live_hint"].format(value=live_minimum_payment))
-
-    submitted = st.form_submit_button(t["calculate"], use_container_width=True)
-
-if submitted:
-    clear_result_state()
-
-    st.session_state.loan_amount_input = loan_amount_input
-    st.session_state.annual_interest_rate_input = annual_interest_rate_input
-    st.session_state.annual_lump_sum_input = annual_lump_sum_input
-
-    field_errors = []
-
-    loan_amount, error = validate_float_field(loan_amount_input, t["loan_amount"], t)
-    if error:
-        field_errors.append(error)
-
-    annual_interest_rate, error = validate_float_field(annual_interest_rate_input, t["interest_rate"], t)
-    if error:
-        field_errors.append(error)
-
-    annual_lump_sum, error = validate_optional_float_field(
-        annual_lump_sum_input,
-        t["annual_lump_sum"],
-        t,
-    )
-    if error:
-        field_errors.append(error)
-
-    if selected_mode == "monthly":
-        st.session_state.years_input = first_dynamic_input
-        st.session_state.residual_balance_input = second_dynamic_input
-
-        years, error = validate_int_field(first_dynamic_input, t["years"], t)
-        if error:
-            field_errors.append(error)
-
-        residual_balance_target, error = validate_optional_float_field(
-            second_dynamic_input,
-            t["residual_balance"],
-            t,
-        )
-        if error:
-            field_errors.append(error)
-
-        if years is not None and years <= 0:
-            field_errors.append(t["years_error"])
-
-        if residual_balance_target is not None and residual_balance_target < 0:
-            field_errors.append(t["residual_balance_error"])
-
-        if (
-            loan_amount is not None
-            and residual_balance_target is not None
-            and residual_balance_target >= loan_amount
-        ):
-            field_errors.append(t["residual_balance_too_high_error"])
-
-    elif selected_mode == "payoff":
-        st.session_state.monthly_payment_input = first_dynamic_input
-        st.session_state.residual_balance_input = second_dynamic_input
-
-        monthly_payment, error = validate_float_field(first_dynamic_input, t["monthly_payment"], t)
-        if error:
-            field_errors.append(error)
-
-        residual_balance_target, error = validate_optional_float_field(
-            second_dynamic_input,
-            t["residual_balance"],
-            t,
-        )
-        if error:
-            field_errors.append(error)
-
-        if monthly_payment is not None and monthly_payment <= 0:
-            field_errors.append(t["monthly_payment_error"])
-
-        if residual_balance_target is not None and residual_balance_target < 0:
-            field_errors.append(t["residual_balance_error"])
-
-        if (
-            loan_amount is not None
-            and residual_balance_target is not None
-            and residual_balance_target >= loan_amount
-        ):
-            field_errors.append(t["residual_balance_too_high_error"])
-
-    else:
-        st.session_state.years_input = first_dynamic_input
-        st.session_state.monthly_payment_input = second_dynamic_input
-
-        years, error = validate_int_field(first_dynamic_input, t["years"], t)
-        if error:
-            field_errors.append(error)
-
-        monthly_payment, error = validate_float_field(second_dynamic_input, t["monthly_payment"], t)
-        if error:
-            field_errors.append(error)
-
-        if years is not None and years <= 0:
-            field_errors.append(t["years_error"])
-
-        if monthly_payment is not None and monthly_payment <= 0:
-            field_errors.append(t["monthly_payment_error"])
-
-    if loan_amount is not None and loan_amount <= 0:
-        field_errors.append(t["loan_amount_error"])
-
-    if annual_interest_rate is not None and annual_interest_rate < 0:
-        field_errors.append(t["interest_rate_error"])
-
-    if annual_lump_sum is not None and annual_lump_sum < 0:
-        field_errors.append(t["annual_lump_sum_error"])
-
-    if field_errors:
-        for err in field_errors:
-            st.error(err)
-    else:
-        try:
-            if selected_mode == "monthly":
-                if annual_lump_sum > 0:
-                    base_result = calculate_mortgage_by_term(
-                        loan_amount=loan_amount,
-                        annual_interest_rate=annual_interest_rate,
-                        years=years,
-                        t=t,
-                        residual_balance_target=residual_balance_target,
-                    )
-                    result = calculate_mortgage_by_term_with_lump_sum(
-                        loan_amount=loan_amount,
-                        annual_interest_rate=annual_interest_rate,
-                        years=years,
-                        annual_lump_sum=annual_lump_sum,
-                        t=t,
-                        residual_balance_target=residual_balance_target,
-                    )
-                    result["comparison"] = calculate_lump_sum_impact(base_result, result)
-                    st.session_state.result = result
-                else:
-                    st.session_state.result = calculate_mortgage_by_term(
-                        loan_amount=loan_amount,
-                        annual_interest_rate=annual_interest_rate,
-                        years=years,
-                        t=t,
-                        residual_balance_target=residual_balance_target,
-                    )
-
-            elif selected_mode == "payoff":
-                if annual_lump_sum > 0:
-                    base_result = calculate_mortgage_by_payment(
-                        loan_amount=loan_amount,
-                        annual_interest_rate=annual_interest_rate,
-                        monthly_payment=monthly_payment,
-                        t=t,
-                        residual_balance_target=residual_balance_target,
-                    )
-                    result = calculate_mortgage_by_payment_with_lump_sum(
-                        loan_amount=loan_amount,
-                        annual_interest_rate=annual_interest_rate,
-                        monthly_payment=monthly_payment,
-                        annual_lump_sum=annual_lump_sum,
-                        t=t,
-                        residual_balance_target=residual_balance_target,
-                    )
-                    result["comparison"] = calculate_lump_sum_impact(base_result, result)
-                    st.session_state.result = result
-                else:
-                    st.session_state.result = calculate_mortgage_by_payment(
-                        loan_amount=loan_amount,
-                        annual_interest_rate=annual_interest_rate,
-                        monthly_payment=monthly_payment,
-                        t=t,
-                        residual_balance_target=residual_balance_target,
-                    )
-
-            else:
-                st.session_state.result = calculate_balance_after_term(
-                    loan_amount=loan_amount,
-                    annual_interest_rate=annual_interest_rate,
-                    monthly_payment=monthly_payment,
-                    years=years,
-                    t=t,
-                    annual_lump_sum=annual_lump_sum,
-                )
-
-        except ValueError as e:
-            clear_result_state()
-
-            message = str(e).strip()
-            if message:
-                st.error(message)
-            else:
-                st.error(t["invalid_numeric_error"])
-
-result = st.session_state.result
-
-st.subheader(t["results_section"])
-
-if result is not None:
-    tab_summary, tab_balance, tab_total_cost, tab_yearly_cost, tab_simple, tab_full = st.tabs(
-        [
-            t["summary"],
-            t["remaining_balance_graph"],
-            t["total_mortgage_cost"],
-            t["mortgage_cost_by_year"],
-            t["simple_explanation_table"],
-            t["full_yearly_data_table"],
-        ]
-    )
-
-    with tab_summary:
-        render_summary(
-            result=result,
-            t=t,
-        )
-
-    with tab_balance:
-        st.subheader(t["remaining_balance_graph"])
-        st.plotly_chart(
-            plot_balance_interactive(result["yearly_df"], t),
-            use_container_width=True,
-        )
-
-    with tab_total_cost:
-        st.subheader(t["total_mortgage_cost"])
-        st.plotly_chart(
-            plot_total_principal_vs_interest(
-                result["principal_repaid_total"],
-                result["total_interest"],
-                result["total_paid"],
-                t,
-            ),
-            use_container_width=True,
-        )
-
-    with tab_yearly_cost:
-        st.subheader(t["mortgage_cost_by_year"])
-        st.plotly_chart(
-            plot_yearly_mortgage_cost(result["yearly_df"], t),
-            use_container_width=True,
-        )
-
-    with tab_simple:
-        st.subheader(t["simple_explanation_table"])
-        st.dataframe(
-            build_simple_explanation_table(result["yearly_df"], t),
-            use_container_width=True,
-            hide_index=True,
-        )
-
-    with tab_full:
-        st.subheader(t["full_yearly_data_table"])
-        st.dataframe(
-            format_full_table(result["yearly_df"], t),
-            use_container_width=True,
-            hide_index=True,
-        )
-else:
-    st.info(t["enter_values_info"])
+with main_tab_property:
+    render_property_assistant(t)

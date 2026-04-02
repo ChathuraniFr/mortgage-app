@@ -1,3 +1,7 @@
-streamlit
-pandas
-plotly
+streamlit # app UI
+pandas # CSV / Excel / table parsing
+plotly # charts
+beautifulsoup4 # HTML parsing
+pypdf # PDF fallback extraction
+lxml # faster more robust HTML parsing (used by BeautifulSoup + pandas)
+pdfplumber # better PDF text extraction
